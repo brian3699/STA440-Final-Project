@@ -1,0 +1,592 @@
+---
+title: "A Correlational Study on Sleep's Relationship with Physical Activity and Heart Rate"
+author: "Young Jun"
+date: "2023-12-18"
+fontsize: 11pt
+geometry: "left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+
+## Introduction
+
+&nbsp;&nbsp;&nbsp;&nbsp; Exercise has long been recognized as a promoter of better sleep, a belief that dates back to ancient times (Ancoli-Israel, 2001). Numerous studies have investigated this widely held perception. A study by Driver and Taylor in 2000 established a moderate positive correlation between regular physical activity and improvements in both sleep duration and quality. Although the understanding of this link remains incomplete, existing research provides valuable insights. For instance, individuals who engaged in daytime physical activities showed elevated levels of melatonin—a hormone critical in regulating sleep cycles—and reported superior sleep quality (Lee and Kim, 2014). Moreover, the benefits of exercise extend beyond the physical, as it has been linked to potentially enhancing psychological well-being before sleep, further reinforcing its positive correlation on sleep quality (Dunn et al., 2005).
+
+
+&nbsp;&nbsp;&nbsp;&nbsp; While the beneficial effects of exercise on sleep are widely acknowledged, the optimal timing of exercise in relation to sleep remains a subject of debate and mystery. Key questions persist: When is the best time to exercise? Specifically, does exercising immediately before bedtime relate to sleep quality and duration? Research in this area has produced mixed results. Some studies suggest that vigorous exercise right before sleep, which elevates physiological arousal at bedtime, may hinder the onset of sleep (Oda and Shirakawa, 2014). Additionally, such pre-sleep exercise can cause fluctuations in heart rate (Myllymäki et al., 2012), which have been associated with poor sleep quality (Walker et al., 1978). Contrary to these findings and general sleep recommendations, intense exercise exertion just before bedtime was also linked with improved sleep patterns in a group of healthy young adults (Brand et al., 2014). Moreover, some research indicates that vigorous late-night showed no relation to sleep quality (Uchida et al., 2012), further complicating the understanding of this relationship.
+
+&nbsp;&nbsp;&nbsp;&nbsp;Amidst a landscape of ongoing research replete with conflicting findings, this study endeavors to contribute to the current body of knowledge by leveraging a unique dataset of Fitbit health data recordings. This dataset encompasses 24-hour continuous monitoring of heart rate, calorie consumption, and sleep states from 30 healthy participants, who voluntarily shared their data via Amazon Mechanical Turk, a well-known crowd-sourcing platform (Furberg et al., 2016). The distinct nature of this dataset, featuring round-the-clock health monitoring, enables a detailed examination of how physical activity levels during specific periods of the day are associated with variations in sleep duration and quality. Moreover, this dataset includes measurements of heart rate variability, a factor hypothesized to influence the relationship between the late-night exercise and sleep quality (Myllymäki et al., 2012). By incorporating heart rate variability into our analysis, this study aims to offer new insights into the complex interactions between daily physical activity, physiological responses, and sleep patterns.
+
+In summary, we hope to address the following questions throughout the report:
+
+1. Controlling for other explanatory variables, do average heart rate and heart rate variance within 3 hours prior to nighttime sleep relate to sleep length and quality. 
+2. Controlling for other explanatory variables, do level of activity (calorie used) within 3 hours prior to nighttime sleep, 3 hours after sleep, and during daytime relate to sleep quality and length.
+
+Based on previous research, we hypothesize that (1) high heart rate and high heart rate variance are associated with lower sleep length and sleep proportion (Myllymäki et al., 2012; Walker et al., 1978). Additionally, given the conflicting results in the literature, we hypothesize that (2) the level of activity (calorie usage) right before nighttime sleep does not have a statistically significant association with the sleep length and proportion (Oda and Shirakawa, 2014; Brand et al., 2014; Uchida et al., 2012). However, we hypothesize that the (3) high calorie usage during the day and in the morning is associated with higher sleep length and proportion (Lee and Kim, 2014; Dunn et al., 2005).
+
+Additionally, the entire research paper is reproducible and the code can be found at : https://github.com/brian3699/STA440-Final-Project.
+
+## Data 
+
+&nbsp;&nbsp;&nbsp;&nbsp; The study capitalizes on a Fitbit dataset that was crowd-sourced through Amazon Mechanical Turk. This rich dataset was initially released for data competitions and research purposes and has since garnered over 116,000 downloads. This dataset comprises comprehensive 24-hour monitoring data of heart rate, calorie usage, and sleep state from 30 healthy participants, collected over the period of March to May 2016. 
+
+&nbsp;&nbsp;&nbsp;&nbsp; The dataset initially comprised 413 observations from 30 participants. However, not all data types were consistently recorded. While sleep and calorie data are default measurements in Fitbit devices, heart rate monitoring is an optional feature that users need to turn on to measure (Fitabase, 2018). This narrowed down the number of feasible participants for this study to 10. Additionally, the reliability of the Fitbit device's recordings was sometimes compromised due to its movement around the wrist, leading to occasional gaps in data capture. To ensure the validity of the measurements, a criterion was set that for a measurement to be considered valid, it must represent at least 90% of the designated time interval. After applying these criteria, the dataset was distilled to 142 valid recordings of sleep from 9 participants. From this refined dataset, relevant and usable data were extracted for the study's analysis: 
+
+### Sleep State: 
+
+&nbsp;&nbsp;&nbsp;&nbsp; Sleep state data documents the sleep patterns of the participants, with the exact datetime in minutes and the sleep state categorized into three stages: 1 (sleep), 2 (restless), and 3 (awake) (Fitabase, 2018). The data cleaning and preparation for this file are as follows:
+
+
+*  **Extraction of Sleep Length and Sleep Proportion** : The data was arranged into two primary columns: sleep length and sleep proportion. Each sleep session was identified by a unique log ID. Sleep length was determined by calculating the time difference between the earliest and latest recorded times associated with the same log ID. Sleep proportion was computed as the proportion of stage 1 (in sleep) relative to the total recording sleep stages.
+
+* **Merging Close Sleep Sessions**: In instances where sleep sessions started within one hour of the previous one, we assumed that these are the same sleep sessions and were merged. This involved summing the sleep lengths and recalculating the sleep proportion based on the combined data. 
+
+* **Selection of the Longest Sleep Session**: The study focused on the longest sleep session of the day, as the primary interest was in nighttime sleep. Therefore, each day was represented by a single row of sleep data in the final dataset. In cases where multiple sleep sessions occurred in a day, a new column labeled 'nap' was introduced, with a value of 1 indicating the occurrence of a nap on that day.
+
+* **Categorization of Sleep Start Time**: The start time of sleep was categorized into several timeframes: 6 PM to 9 PM, 9 PM to midnight, midnight to 3 AM, 3 AM to 6 AM, and daytime for all other times. This categorization was based on previous research indicating different sleep patterns and qualities associated with these timeframes (Uchida et al., 2012).
+
+### Calorie Usage:
+
+&nbsp;&nbsp;&nbsp;&nbsp; Calorie usage data file records the exact datetime in minutes and the amount of calories used during each of those minutes.We use calorie usage as a measure of activity in this study as it measures the amount of energy the body spent. The calorie measurements were divided into three key variables representing different time intervals related to sleep:
+
+* **Calorie Usage Within 3 Hours Prior to Sleep**: This variable was calculated as the sum of minute-based calorie usage in the three-hour period before sleep onset.
+
+* **Calorie Usage Within 3 Hours After Sleep**: Similarly, this variable represented the total calorie usage in the three-hour period following the end of sleep.
+
+* **Daytime Calorie Consumption**: This variable captured the total calorie usage from three hours after waking up to three hours before the subsequent sleep session.
+
+&nbsp;&nbsp;&nbsp;&nbsp; The choice of measuring calorie usage three hours before and after sleep is grounded in established practices in sleep research. This specific time frame has been utilized in multiple previous studies, facilitating comparative analysis and alignment with existing literature (Oda and Shirakawa, 2014). Additionally, in cases where minute-based recordings were missing, the average calorie usage for the respective time interval was used to fill in these gaps. This approach ensured a continuous and complete dataset for each participant, which is crucial for accurate and meaningful analysis.
+
+### Heart Rate Monitoring:
+
+&nbsp;&nbsp;&nbsp;&nbsp; Heart rate monitoring data includes records of heart rate per minute, marked with the exact datetime in minutes. The average heart rate was calculated for the three-hour period immediately preceding sleep. Heart rate variability was computed for the same three-hour period prior to sleep. 
+
+
+## Methodology
+
+### Deciding Explanatory Variables of Interest
+
+&nbsp;&nbsp;&nbsp;&nbsp; In our analysis, we have identified the primary variables of interest, which are divided into two main categories. The first category includes variables related to calorie consumption: specifically, the calories used during the three hours prior to sleep, the three hours following wakefulness, and during the daytime. The second category of variables focuses on the heart rate metrics: we examine both the mean and variance of heart rate during the three-hour period preceding sleep. The data visualization of these variables are included in the appendix (Figures 8 to 17).
+
+&nbsp;&nbsp;&nbsp;&nbsp; Additionally, to ensure a comprehensive analysis, we include a couple of control variables in our study. These are: the presence of naps ('nap') and the categorization of sleep start times ('sleep start time'). The inclusion of these categorical variables is aimed at accounting for their effects in our conclusions. By controlling for these factors, we can isolate and better understand the impact of our primary variables of interest on sleep. 
+
+```{r fig.width=12, fig.height=6}
+
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+
+sleep_data <- read.csv("sleep_log.csv")
+sleep_data <- na.omit(sleep_data)
+sleep_data$sleep_proportion <- sleep_data$sleep_proportion * 100
+
+
+p1 <- ggplot(sleep_data, aes(x = as.factor(nap), y = sleep_length)) +
+    geom_boxplot() +
+    labs(title = "Fig 1: Sleep Length by Nap",
+         x = "Nap",
+         y = "Sleep Length") 
+
+
+p2 <-ggplot(sleep_data, aes(x = as.factor(nap), y = sleep_proportion)) +
+    geom_boxplot() +
+    labs(title = "Fig 2: Sleep Proportion by Nap",
+         x = "Nap",
+         y = "Sleep Proportion")
+
+
+p3 <-ggplot(sleep_data, aes(x = start_time_category, y = sleep_length)) +
+    geom_boxplot() +
+    labs(title = "Fig 3: Sleep Length by Start Time",
+         x = "Sleep Start Time Category",
+         y = "Sleep Length")
+
+p4 <-ggplot(sleep_data, aes(x = start_time_category, y = sleep_proportion)) +
+    geom_boxplot() +
+    labs(title = "Fig 4: Sleep Proportion by Start Time",
+         x = "Sleep Start Time Category",
+         y = "Sleep Proportion")
+
+grid.arrange(p1, p2, ncol = 2)
+
+
+```
+```{r fig.width=12, fig.height=6}
+grid.arrange(p3, p4, ncol = 2)
+```
+
+**Figure 1 to 4**: Figure 1 to 4 shows box plots of sleep length and sleep proprtion by categorical variables nap and sleep start time. 0 in nap represents no nap in the day and vice-versa
+
+&nbsp;&nbsp;&nbsp;&nbsp; In addition to using visualization, we use Multivariate Analysis of Variance (MANOVA) to test the effect of the independent variables (nap and start time category) on two or more dependent variables (sleep length and sleep proportion) simultaneously (Bathke et al., 2018). The results show that both nap and sleep start time have p-value below the threshold value 0.05. Hence, both will be included in the statistical analysis. The detailed results of the MANOVA is included in the appendix figure 20. 
+
+### Deciding on a Statistical Model: Assessment of Participant-Level Variability
+
+&nbsp;&nbsp;&nbsp;&nbsp; To understand the relationship between activity level and heart rate on sleep, we need to account for the inherent variability that may exist among individual participants. We first provided the visual evidence of the variability in sleep length and proportion by participant id in appendix figures 18 and 19. Additionally, we employ MANOVA again to check whether the null hypothesis that all particpants have the same mean value for the respective metrics of the study. \newline
+
+
+
+```{r}
+library(knitr)
+library(kableExtra)
+# fig.width=12, fig.height=6
+# MANOVA test
+sleep_manova <- manova(cbind(sleep_length, sleep_proportion) ~ id, data = sleep_data)
+manova_results <- summary(sleep_manova)
+
+# Extracting the results
+manova_summary <- data.frame(
+  Pillais = manova_results$stats[, "Pillai"],
+  Approx_F = manova_results$stats[, "approx F"],
+  Num_DF = manova_results$stats[, "num Df"],
+  Den_DF = manova_results$stats[, "den Df"],
+  P_Value = manova_results$stats[, "Pr(>F)"]
+)
+manova_summary <- manova_summary[-nrow(manova_summary), ]
+
+# Rounding the numerical columns to three significant figures
+manova_summary$Pillais <- round(manova_summary$Pillais, 3)
+manova_summary$Approx_F <- round(manova_summary$Approx_F, 3)
+manova_summary$Num_DF <- round(manova_summary$Num_DF, 3)
+manova_summary$Den_DF <- round(manova_summary$Den_DF, 3)
+
+
+
+kable(manova_summary)
+
+
+```
+**Figure 5**: Results from the MANOVA on the variability of sleep length and proportion by id
+
+&nbsp;&nbsp;&nbsp;&nbsp; P-value is less than the threshold 0.05 and we reject the null hypothesis. Therefore, we take into account the inherent variability among individual participants to account in our model. 
+
+
+### Model Selection
+
+&nbsp;&nbsp;&nbsp;&nbsp; To account for the inter-participant variability, we use the linear mixed model in this study. Hence, the id of the participant is the random effect of the model. Additionally, this study uses random intercept instead of random slope since the primary research questions are focused on understanding relationship between the variables instead of predicting the sleep length and proportion. 
+
+&nbsp;&nbsp;&nbsp;&nbsp; In addition to the variables discussed, we also include 4 additional interaction terms to our model. The first two interaction terms are average heart rate 3 hours prior to sleep with calories usage 3 hours prior to sleep and heart rate variance 3 hours prior to sleep with calories usage 3 hours prior. These interaction terms are included since physical activity is linked to hear rate as noted in the study by Myllymäki et al in 2012. Additionally, we also include interaction terms calories usage 3 hours after sleep with daytime calorie usage and calories usage 3 hours prior to sleep with daytime. This is to account for the potential interaction between the two variables as these variables records calories from adjacent time interval. Overall, the model can be written as the following:
+
+\small
+\begin{equation*}
+\begin{aligned}
+\text{Sleep Length}_{ij} &= \beta_0 + \beta_1\text{Nap}_{ij} + \beta_2\text{Sleep Start Time}_{ij} + \beta_3\text{Calorie Usage After Sleep}_{ij}  \\ &+ 
+\beta_4\text{Calorie Usage Before Sleep}_{ij} + \beta_5\text{Calorie Usage Daytime}_{ij} + \beta_6\text{Avg. Heart Rate Before Sleep}_{ij}  \\ &+
+\beta_7\text{Heart Rate Var. Before Sleep}_{ij} + \beta_8(\text{Avg. Heart Rate Before Sleep} \times \text{Calorie Usage Before Sleep})_{ij}  \\ &+
+\beta_9(\text{Heart Rate Var. Before Sleep} \times \text{Calorie Usage Before Sleep})_{ij} 
+\\ &+ \beta_{10}(\text{Calorie Usage Before Sleep} \times \text{Calorie Usage Daytime})_{ij} 
+\\ &+ \beta_{11}(\text{Calorie Usage After Sleep} \times \text{Calorie Usage Daytime})_{ij} +  \text{u}_{j} + \varepsilon_{ij}
+\end{aligned}
+\end{equation*}
+\normalsize
+
+
+\small
+\begin{equation*}
+\begin{aligned}
+\text{Sleep Proportion}_{ij} &= \beta_0 + \beta_1\text{Nap}_{ij} + \beta_2\text{Sleep Start Time}_{ij} + \beta_3\text{Calorie Usage After Sleep}_{ij}  \\ &+ 
+\beta_4\text{Calorie Usage Before Sleep}_{ij} + \beta_5\text{Calorie Usage Daytime}_{ij} + \beta_6\text{Avg. Heart Rate Before Sleep}_{ij}  \\ &+
+\beta_7\text{Heart Rate Var. Before Sleep}_{ij} + \beta_8(\text{Avg. Heart Rate Before Sleep} \times \text{Calorie Usage Before Sleep})_{ij}  \\ &+
+\beta_9(\text{Heart Rate Var. Before Sleep} \times \text{Calorie Usage Before Sleep})_{ij} 
+\\ &+ \beta_{10}(\text{Calorie Usage Before Sleep} \times \text{Calorie Usage Daytime})_{ij} 
+\\ &+ \beta_{11}(\text{Calorie Usage After Sleep} \times \text{Calorie Usage Daytime})_{ij} +  \text{u}_{j} + \varepsilon_{ij}
+\end{aligned}
+\end{equation*}
+\normalsize
+
+
+- *i  represents a particular observation, $\text{j}$ represents the j-th participant, $\beta_0$ is the intercept, $\beta_1$ to $\beta_{11}$ are fixed effect coefficients*
+
+- *$\text{u}_{j} \text{(random intercept for the j-th participant)} \sim \text{i.i.d. } N(0, \sigma^2_{\text{individual}})$*
+
+- *$\varepsilon_{ij} \text{(error term for the i-th observation from the j-th participant)} \stackrel{\text{i.i.d.}}{\sim} N(0, \sigma^2)$*
+
+
+&nbsp;&nbsp;&nbsp;&nbsp; We first check the model conditions of the linear mixed model. First, the residual plots in the appendix (Figures 21 and 22) for the two models do not show a clear pattern; confirming the constant variance and the linearity assumptions. The Q-Q plots of the each models (Figures 23 and 24) shows that the points generally follow the perfect normal distribution with minor deviation. Finally, although the study uses repeated measures from the same participants which may create dependency, the linear mixed model accounts for this by introducing random effect for participants. Hence, the independence condition is also satisfied. 
+
+
+
+## Results 
+
+**Figure 6: Response - Sleep Length** 
+(Random Effect: Participant ID - 78.250 SD), Cond. R-Squared: 0.337 
+
+```{r fig.width=12, fig.height=5}
+library(lmerTest)
+library(knitr)
+
+sleep_data$HR_3hr_sleep_var <- sleep_data$heartrate_3hours_before_sleep_variance
+sleep_data$HR_3hr_sleep_avg <- sleep_data$heartrate_3hours_before_sleep
+
+lmm_model1 <- lmer(sleep_length ~ nap + start_time_category + calories_3hour_after_sleep + 
+                  calories_3hour_before_sleep + calories_daytime + 
+                  HR_3hr_sleep_avg + HR_3hr_sleep_var +
+                  HR_3hr_sleep_avg:calories_3hour_before_sleep +
+                  HR_3hr_sleep_var:calories_3hour_before_sleep +
+                  calories_3hour_before_sleep:calories_daytime +
+                  calories_3hour_after_sleep:calories_daytime + 
+                  (1 | id), data = sleep_data)
+
+#model_table <- kable(summary(lmm_model1)$coefficients, digits = 3, 
+#                     booktabs = TRUE) %>%
+#  kable_styling(font_size = 9) %>%
+#  kable_styling(position = "center")
+
+#model_table
+
+kable(summary(lmm_model1)$coefficients, digits = 3)
+
+#library(performance)
+#library(MuMIn)
+
+#r.squaredGLMM(lmm_model1)
+
+# Extract variance of random effects
+#rand_eff_var <- as.data.frame(VarCorr(lmm_model1))$vcov
+
+# Extract standard deviation of random effects
+#sqrt(rand_eff_var)
+
+```
+**Figure 7: Response - Sleep Proportion** \newline
+(Random Effect: Participant ID - 2.38 SD), Cond. R-Squared: 0.526
+```{r fig.width=9, fig.height=5}
+library(lmerTest)
+library(knitr)
+
+sleep_data$HR_3hr_sleep_var <- sleep_data$heartrate_3hours_before_sleep_variance
+sleep_data$HR_3hr_sleep_avg <- sleep_data$heartrate_3hours_before_sleep
+
+lmm_model2 <- lmer(sleep_proportion ~ nap + start_time_category + calories_3hour_after_sleep + 
+                  calories_3hour_before_sleep + calories_daytime + 
+                  HR_3hr_sleep_avg + HR_3hr_sleep_var +
+                  HR_3hr_sleep_avg:calories_3hour_before_sleep +
+                  HR_3hr_sleep_var:calories_3hour_before_sleep +
+                  calories_3hour_before_sleep:calories_daytime +
+                  calories_3hour_after_sleep:calories_daytime + 
+                  (1 | id), data = sleep_data)
+
+kable(summary(lmm_model2)$coefficients, digits = 3)
+
+#library(performance)
+#library(MuMIn)
+
+#r.squaredGLMM(lmm_model2)
+
+# Extract variance of random effects
+#rand_eff_var <- as.data.frame(VarCorr(lmm_model2))$vcov
+
+# Extract standard deviation of random effects
+#sqrt(rand_eff_var)
+```
+**Figure 6 and 7**: Results of linear mixed model. Includes the predictor variable's model coefficients, standard error, t-value, and p-value for sleep length and sleep proportion. The values were rounded at three significant figures. Hence, value of 0.000 means that the value was less than 0.0005. 
+
+To implement the linear mixed mode, we utilize the 'lmerTest' package that extends the 'lme4' package. This package is used as it also provides p-value for fixed effects in addition to the value of t-test provided by 'lme4' (Kuznetsova et al., 2020).
+
+&nbsp;&nbsp;&nbsp;&nbsp; Figure 6 illustrates that the proposed linear mixed model for sleep length accounts for 33.7% of the variability in sleep length (R-squared). Additionally, heart rate variability within the 3 hours prior to sleep exhibited a statistically significant negative correlation with sleep length (t = -2.233, p = 0.027), while controlling for other factors and accounting for random effects by the participant (all subsequent interpretations of Figure 6 assume the same). Furthermore, the interaction term between calorie usage and heart rate variance within the 3 hours prior to sleep also showed a significant correlation. 
+
+&nbsp;&nbsp;&nbsp;&nbsp; Beyond the primary variables of interest, sleeping between 6 PM to 9 PM was positively correlated with sleep length in a statistically significant manner. Conversely, sleeping between 3 AM to 6 AM or during the daytime was significantly negatively correlated with sleep length. This is in line with the general expectation that people sleep longer when they sleep earlier, whereas sleep time is limited when people go to bed late or during the day. 
+
+&nbsp;&nbsp;&nbsp;&nbsp; Figure 7 demonstrates that the proposed linear mixed model for sleep proportion explains 52.6% of the variability in sleep proportion (R-squared). However, the only variable that showed statistical significance is the presence of naps (t = -3.037, p = 0.003); taking a nap is negatively correlated with sleep proportion (-2.517). This is in line with the current literature that taking a nap decreases nightime sleep quality (Campbell et al., 2005). However, none of the other variables, particularly those of primary interest, reached a p-value below the threshold of 0.05.
+
+
+## Discussion
+
+&nbsp;&nbsp;&nbsp;&nbsp; Our study partially supports the first hypothesis that high heart rate and heart rate variability are associated with reduced sleep length and sleep proportion. The model demonstrated a statistically significant negative correlation between heart rate variability and sleep length and proportion. This finding is particularly compelling, reinforcing the notion that physiological arousal levels prior to sleep can adversely affect sleep duration (Myllymäki et al., 2012). However, it is important to note that the study did not confirm all the anticipated relationships, suggesting that the interplay between heart rate and sleep is complex and may be influenced by additional unmeasured factors.
+
+&nbsp;&nbsp;&nbsp;&nbsp; In line with our second hypothesis, the results indicate that pre-sleep activity levels, as measured by calorie usage, do not have a statistically significant impact on sleep length or sleep proportion. This non-finding is significant in itself, contributing to the ongoing discourse in the field where conflicting evidence prevails. Our study adds weight to the argument that immediate pre-sleep energy expenditure may not be a major determinant of sleep quality or duration.
+
+&nbsp;&nbsp;&nbsp;&nbsp; Lastly, the study did not confirm our third hypothesis regarding the influence of calorie usage during the day and the morning on sleep length and proportion. The lack of statistically significant correlations in this domain suggests that while metabolic factors are undoubtedly essential for sleep regulation, their direct contribution to sleep metrics may not be as pronounced as hypothesized. This outcome encourages a more nuanced exploration of the metabolic demands of sleep beyond calorie consumption alone. 
+
+&nbsp;&nbsp;&nbsp;&nbsp; There are two major limitations and potential areas for improvement in this study. The first arises from the fact that the data is limited to that from Fitbit wearable devices. This research utilized calorie expenditure as the sole measure and assumes it to be representative of activity levels. However, calorie usage of the body also depends on the basal metabolic rate and other complex mechanisms (Henry, 2005). Hence, incorporating participant information such as body mass index, basal metabolic rate, and other measures of activity like the number of steps could increase the model's accuracy. Additionally, previous research has shown that the effect of exercise on sleep varies with the type of exercise (Bonardi et al., 2016). In essence, to enhance our understanding of the relationship between sleep, activity, and heart rate, subsequent research should employ multiple methods of measurement, including wearable devices, lab tests, and self-reports to integrate this information.
+
+&nbsp;&nbsp;&nbsp;&nbsp; Furthermore, we used a three-hour interval before sleep for practical reasons, as this is a commonly used measure in multiple prior studies, allowing for easier comparison. However, this assumption may negatively impact our primary research interest in understanding the relationship between sleep, activity level, and heart rate. As we gain a better understanding of the exact mechanisms of how heart rate and sleep are related, we can fine-tune the time interval to one that is more appropriate and more directly related to sleep length and proportion, thus increasing the model's accuracy and providing a better understanding of the relationship.
+
+&nbsp;&nbsp;&nbsp;&nbsp; To conclude, this study incorporates a unique dataset that includes concurrent recordings of heart rate, calorie expenditure, and sleep, combined with rigorous statistical analysis. Considering the research area of sleep's relationship with activity and heart rate contains convoluted and conflicting results, this study provides a valuable addition to the literature and highlights potential methods for improvement.
+
+\newpage
+
+# Appendix
+
+## Data Visualization of Dependent Variables
+
+```{r}
+
+par(mfrow=c(2, 1))
+
+# Histogram for sleep_length
+hist(sleep_data$sleep_length, main="Figure 8: Histogram of Sleep Length", xlab="Sleep length (minutes)",
+     ylab="Frequency", border="black", breaks =15)
+
+# Histogram for sleep_proportion with a new scaling
+hist(sleep_data$sleep_proportion, main="Figure 9: Histogram of Sleep Proportion", xlab="Sleep Proportion (%)",
+     ylab="Frequency", border="black", breaks = 30, xlim=c(80, 100))
+
+# Reset the layout
+par(mfrow=c(1, 1), xlim=c(0.8, 1.0))
+
+
+```
+
+## Data Visualization of Variables of Interest 
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+
+
+
+
+# Plot for sleep_length vs. calories_3hour_before_sleep
+p1 <- ggplot(sleep_data, aes(x=calories_3hour_before_sleep, y=sleep_length)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method = "lm", color="blue", se=FALSE) +
+  labs(title="Figure 10: Relationship of Sleep Length and Calorie Usage 3 Hours Before Sleep",
+       x="Calorie Usage 3 Hours Before Sleep",
+       y="Sleep Length") 
+
+# Print the sleep_length plot
+print(p1)
+
+# Plot for sleep_proportion vs. calories_3hour_before_sleep
+p2 <- ggplot(sleep_data, aes(x=calories_3hour_before_sleep, y=sleep_proportion)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method = "lm", color="blue", se=FALSE) +
+  labs(title="Figure 11: Sleep Proportion and Calorie Usage 3 Hours Before Sleep",
+       x="Calorie Usage 3 Hours Before Sleep",
+       y="Sleep Proportion")
+
+# Print the sleep_proportion plot
+print(p2)
+
+
+
+# Plot for sleep_proportion vs. calories_3hour_before_sleep
+p3 <- ggplot(sleep_data, aes(x=heartrate_3hours_before_sleep_variance, y=sleep_length)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method = "lm", color="blue", se=FALSE) +
+  labs(title="Figure 12: Relationship between Sleep Length and Heart Rate Variability",
+       x="Heart Rate Variability",
+       y="Sleep length") 
+
+# Print the sleep_proportion plot
+print(p3)
+
+# Plot for sleep_proportion vs. calories_3hour_before_sleep
+p4 <- ggplot(sleep_data, aes(x=heartrate_3hours_before_sleep_variance, y=sleep_proportion)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method = "lm", color="blue", se=FALSE) +
+  labs(title="Figure 13: Relationship between Sleep Proportion and Heart Rate Variability",
+       x="Heart Rate Variability",
+       y="Sleep Proportion") 
+  
+
+# Print the sleep_proportion plot
+print(p4)
+
+# Plot for sleep_length vs. calories_3hour_before_sleep
+p1 <- ggplot(sleep_data, aes(x=calories_3hour_after_sleep, y=sleep_length)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method = "lm", color="blue", se=FALSE) +
+  labs(title="Figure 14: Relationship of Sleep Length and Calorie Usage 3 Hours After Sleep",
+       x="Calorie Usage 3 Hours Before Sleep",
+       y="Sleep Length") 
+
+# Print the sleep_length plot
+print(p1)
+
+# Plot for sleep_proportion vs. calories_3hour_before_sleep
+p2 <- ggplot(sleep_data, aes(x=calories_3hour_after_sleep, y=sleep_proportion)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method = "lm", color="blue", se=FALSE) +
+  labs(title="Figure 15: Sleep Proportion and Calorie Usage 3 Hours After Sleep",
+       x="Calorie Usage 3 Hours Before Sleep",
+       y="Sleep Proportion")
+
+# Print the sleep_proportion plot
+print(p2)
+
+# Plot for sleep_proportion vs. calories_3hour_before_sleep
+p3 <- ggplot(sleep_data, aes(x=heartrate_3hours_before_sleep, y=sleep_length)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method = "lm", color="blue", se=FALSE) +
+  labs(title="Figure 16: Relationship between Sleep Length and Heart Rate Average",
+       x="Heart Rate Variability",
+       y="Sleep length") 
+
+# Print the sleep_proportion plot
+print(p3)
+
+# Plot for sleep_proportion vs. calories_3hour_before_sleep
+p4 <- ggplot(sleep_data, aes(x=heartrate_3hours_before_sleep, y=sleep_proportion)) +
+  geom_point(alpha=0.5) +
+  geom_smooth(method = "lm", color="blue", se=FALSE) +
+  labs(title="Figure 17: Relationship between Sleep Proportion and Heart Rate Average",
+       x="Heart Rate Variability",
+       y="Sleep Proportion") 
+  
+
+# Print the sleep_proportion plot
+print(p4)
+
+```
+
+### Sleep length and Proportion by Participant
+
+```{r fig.width=9, fig.height=6}
+
+p1 <- ggplot(sleep_data, aes(x = as.factor(id), y = sleep_length)) +
+    geom_boxplot() +
+    labs(title = "Fig 18: Sleep Length by id",
+         x = "Nap",
+         y = "Sleep Length") 
+
+
+p1
+
+```
+
+```{r fig.width=9, fig.height=6}
+
+p1 <- ggplot(sleep_data, aes(x = as.factor(id), y = sleep_proportion)) +
+    geom_boxplot() +
+    labs(title = "Fig 19: Sleep Proportion by id",
+         x = "Nap",
+         y = "Sleep Proportion") 
+
+
+p1
+
+```
+
+### MANOVA
+
+```{r}
+library(knitr)
+library(kableExtra)
+
+# MANOVA test
+sleep_manova <- manova(cbind(sleep_length, sleep_proportion) ~ nap + start_time_category, data = sleep_data)
+manova_results <- summary(sleep_manova)
+
+# Extracting the results
+manova_summary <- data.frame(
+  Pillais = manova_results$stats[, "Pillai"],
+  Approx_F = manova_results$stats[, "approx F"],
+  Num_DF = manova_results$stats[, "num Df"],
+  Den_DF = manova_results$stats[, "den Df"],
+  Pr_Greater_F = manova_results$stats[, "Pr(>F)"]
+)
+manova_summary <- manova_summary[-nrow(manova_summary), ]
+
+# Rounding the numerical columns to three significant figures
+manova_summary$Pillais <- round(manova_summary$Pillais, 3)
+manova_summary$Approx_F <- round(manova_summary$Approx_F, 3)
+manova_summary$Num_DF <- round(manova_summary$Num_DF, 3)
+manova_summary$Den_DF <- round(manova_summary$Den_DF, 3)
+manova_summary$P_Value <- round(manova_summary$Pr_Greater_F, 3)
+
+
+kable(manova_summary, caption = "Figure 20: MANOVA Results for Sleep Length and Proportion")
+
+
+```
+
+## Model Conditions
+
+### Residual Plot 
+
+```{r}
+# Extract the residuals and fitted values
+residuals <- resid(lmm_model1)
+fitted_values <- fitted(lmm_model1)
+
+# Create a residual plot
+ggplot(data = data.frame(Residuals = residuals, Fitted = fitted_values), aes(x = Fitted, y = Residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Figure 21 : Sleep Length Model- Residual Plot", x = "Fitted Values", y = "Residuals")
+
+
+```
+
+```{r}
+# Extract the residuals and fitted values
+residuals <- resid(lmm_model2)
+fitted_values <- fitted(lmm_model2)
+
+# Create a residual plot
+ggplot(data = data.frame(Residuals = residuals, Fitted = fitted_values), aes(x = Fitted, y = Residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Figure 22 : Sleep Proportion Model- Residual Plot", x = "Fitted Values", y = "Residuals")
+
+
+```
+
+### Q-Q Plot
+
+**Figure 23 : Sleep Length Model- QQ Plot** \newline
+
+```{r fig.width=9, fig.height=6}
+residuals <- resid(lmm_model1)
+
+# Q-Q plot
+qqnorm(residuals)
+qqline(residuals, col = "red")
+```
+
+**Figure 24 : Sleep Length Model- QQ Plot** \newline
+
+```{r fig.width=9, fig.height=6}
+residuals <- resid(lmm_model2)
+
+# Base R Q-Q plot
+qqnorm(residuals)
+qqline(residuals, col = "red")
+```
+\newpage
+
+## Works Cited
+
+Ancoli-Israel, S. (2001). “Sleep Is Not Tangible2” or What the Hebrew Tradition Has to Say About Sleep. Psychosomatic medicine, 63(5), 778-787.
+
+Driver, H. S., & Taylor, S. R. (2000). Exercise and sleep. Sleep medicine reviews, 4(4), 387-402.
+
+Lee, H., Kim, S., & Kim, D. (2014). Effects of exercise with or without light exposure on sleep quality and hormone reponses. Journal of Exercise Nutrition & Biochemistry, 18(3), 293.
+
+Dunn, A. L., Trivedi, M. H., Kampert, J. B., Clark, C. G., & Chambliss, H. O. (2005). Exercise treatment for depression: efficacy and dose response. American journal of preventive medicine, 28(1), 1-8.
+
+Walker, J. M., Floyd, T. C., Fein, G., Cavness, C., Lualhati, R., & Feinburg, I. (1978). Effects of exercise on sleep. Journal of Applied Physiology, 44(6), 945-951.
+
+Uchida, S., Shioda, K., Morita, Y., Kubota, C., Ganeko, M., & Takeda, N. (2012). Exercise effects on sleep physiology. Frontiers in neurology, 3, 48.
+
+Brand, S., Kalak, N., Gerber, M., Kirov, R., Pühse, U., & Holsboer-Trachsler, E. (2014). High self-perceived exercise exertion before bedtime is associated with greater objectively assessed sleep efficiency. Sleep Medicine, 15(9), 1031-1036.
+
+Oda, S., & Shirakawa, K. (2014). Sleep onset is disrupted following pre-sleep exercise that causes large physiological excitement at bedtime. European Journal of Applied Physiology, 114, 1789-1799.
+
+
+Myllymäki, T., Rusko, H., Syväoja, H., Juuti, T., Kinnunen, M. L., & Kyröläinen, H. (2012). Effects of exercise intensity and duration on nocturnal heart rate variability and sleep quality. European journal of applied physiology, 112, 801-809.
+
+Furberg, R., Brinton, J., Keating, M., & Ortiz, A. (2016). Crowd-sourced Fitbit datasets 03.12.2016-05.12.2016 [Data set]. Zenodo. https://zenodo.org/records/53894#.X9oeh3Uzaao
+
+Fitabase. (2018). Data Dictionary. Retrieved from https://zenodo.org/record/53894
+
+Campbell, S. S., Murphy, P. J., & Stauble, T. N. (2005). Effects of a nap on nighttime sleep and waking function in older subjects. Journal of the American Geriatrics Society, 53(1), 48-53.
+
+Bonardi, J. M., Lima, L. G., Campos, G. O., Bertani, R. F., Moriguti, J. C., Ferriolli, E., & Lima, N. K. (2016). Effect of different types of exercise on sleep quality of elderly subjects. Sleep Medicine, 25, 122-129.
+
+Henry, C. J. K. (2005). Basal metabolic rate studies in humans: measurement and development of new equations. Public health nutrition, 8(7a), 1133-1152.
+
+Bathke, A. C., Friedrich, S., Pauly, M., Konietschke, F., Staffen, W., Strobl, N., & Höller, Y. (2018). Testing mean differences among groups: Multivariate and repeated measures analysis with minimal assumptions. Multivariate Behavioral Research, 53(3), 348–359. https://doi.org/10.1080/00273171.2018.1446320
+
+Kuznetsova, A., Brockhoff, P. B., & Christensen, R. H. B. (2020). lmerTest: Tests in Linear Mixed Effects Models (Version 3.1-3) [Computer software]. CRAN. https://cran.r-project.org/web/packages/lmerTest/index.html
+
